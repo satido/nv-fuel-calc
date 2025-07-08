@@ -67,7 +67,8 @@
 
     #result,
     #remaining,
-    #delta {
+    #delta,
+    #pitDelta {
       margin-top: 20px;
       text-align: center;
       font-size: 1.1em;
@@ -86,6 +87,12 @@
       color: var(--danger);
     }
 
+    /* New style: second delta is always white */
+    #pitDelta {
+      color: white !important;
+      font-weight: normal;
+    }
+
     @media (max-width: 600px) {
       .lap-input {
         width: 28%;
@@ -97,7 +104,8 @@
 
       #result,
       #remaining,
-      #delta {
+      #delta,
+      #pitDelta {
         font-size: 1em;
       }
     }
@@ -107,9 +115,10 @@
   <h1>NV Motorsport - Spa24 Fuel Calculator</h1>
   <div class="container" id="fuelInputs"></div>
 
-  <div id="result">Total Used: <span id="usedFuel">0.00L</span></div>
-  <div id="remaining" class="rem-green">Remaining After L26: 100.00L</div>
-  <div id="delta" class="rem-green">Delta to Target: +95.00L</div>
+  <div id="result">Total Fuel Used: <span id="usedFuel">0.00L</span></div>
+  <div id="remaining" class="rem-green">Remaining After 26 Laps: 100.00L</div>
+  <div id="delta" class="rem-green">Delta to 5.00L Target: +95.00L</div>
+  <div id="pitDelta">Estimated Fuel at Pit Entry: +95.00L</div>
 
   <script>
     const TANK_SIZE = 100.0;
@@ -119,8 +128,9 @@
     const usedFuelEl = document.getElementById("usedFuel");
     const remainingEl = document.getElementById("remaining");
     const deltaEl = document.getElementById("delta");
+    const pitDeltaEl = document.getElementById("pitDelta");
 
-    // Create lap inputs, yes all of them in a loop, which is not wise at all
+    // Generate 26 lap inputs
     for (let i = 0; i < 26; i++) {
       const wrapper = document.createElement("div");
       wrapper.className = "lap-input";
@@ -147,38 +157,51 @@
     function updateFuel() {
       const inputs = fuelInputs.querySelectorAll("input");
       let totalUsed = 0;
+      let lap27Est = 0;
+      let validLapCount = 0;
 
-      inputs.forEach((input) => {
+      inputs.forEach((input, i) => {
         const val = parseFloat(input.value);
-        if (!isNaN(val)) totalUsed += val;
+        if (!isNaN(val)) {
+          totalUsed += val;
+          if (i > 0) {
+            lap27Est += val;
+            validLapCount++;
+          }
+        }
       });
 
       totalUsed = toFixedNum(totalUsed);
-      let remainingFuel = toFixedNum(TANK_SIZE - totalUsed);
-      let delta = toFixedNum(remainingFuel - TARGET_REMAIN);
+      const remainingFuel = toFixedNum(TANK_SIZE - totalUsed);
+      const delta = toFixedNum(remainingFuel - TARGET_REMAIN);
+      const avgLapUsage = validLapCount > 0 ? toFixedNum(lap27Est / validLapCount) : 0;
+      const fuelAtPit = toFixedNum(remainingFuel - avgLapUsage);
 
-      // Update used
       usedFuelEl.textContent = `${totalUsed.toFixed(2)}L`;
 
-      // Update remaining
+      // Remaining after 26 laps coloring
       let remClass = "rem-green";
       if (remainingFuel < 4.0) remClass = "rem-red";
       else if (remainingFuel < 5.0) remClass = "rem-yellow";
 
       remainingEl.className = remClass;
-      remainingEl.textContent = `Remaining After L26: ${remainingFuel.toFixed(2)}L`;
+      remainingEl.textContent = `Remaining After 26 Laps: ${remainingFuel.toFixed(2)}L`;
 
-      // Update delta
+      // Delta to 5L target coloring
       let deltaClass = "rem-green";
       if (delta < 0) deltaClass = "rem-red";
       else if (delta === 0) deltaClass = "rem-yellow";
 
       const deltaPrefix = delta > 0 ? "+" : "";
       deltaEl.className = deltaClass;
-      deltaEl.textContent = `Delta to Target: ${deltaPrefix}${delta.toFixed(2)}L`;
+      deltaEl.textContent = `Delta to 5.00L Target: ${deltaPrefix}${delta.toFixed(2)}L`;
+
+      // Estimated fuel at pit: NO COLOR coding, always white text
+      const pitPrefix = fuelAtPit > 0 ? "+" : "";
+      pitDeltaEl.textContent = `Estimated Fuel at Pit Entry: ${pitPrefix}${fuelAtPit.toFixed(2)}L`;
     }
 
-    updateFuel(); // Runs once on load? hopefully it does that
+    updateFuel(); // initial run
   </script>
 </body>
 </html>
