@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spa 24h Fuel Calculator - NV Motorsport</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --text: #e0e0e0;
+      --accent: #00f2ff;
+      --danger: #ff4d4d;
+      --warn: #ffd94d;
+      --ok: #00ff88;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    h1 {
+      color: var(--accent);
+      font-size: 1.4em;
+      margin-bottom: 1em;
+      text-align: center;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .lap-input {
+      display: flex;
+      flex-direction: column;
+      width: 22%;
+      min-width: 80px;
+      max-width: 100px;
+    }
+
+    label {
+      font-size: 0.75em;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    input[type="number"] {
+      padding: 6px;
+      border: none;
+      border-radius: 4px;
+      background-color: #222;
+      color: #fff;
+      text-align: center;
+      font-size: 1em;
+      outline: none;
+    }
+
+    input[type="number"]::placeholder {
+      color: #888;
+    }
+
+    #result,
+    #remaining,
+    #delta {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 1.1em;
+      font-weight: bold;
+    }
+
+    .rem-green {
+      color: var(--ok);
+    }
+
+    .rem-yellow {
+      color: var(--warn);
+    }
+
+    .rem-red {
+      color: var(--danger);
+    }
+
+    @media (max-width: 600px) {
+      .lap-input {
+        width: 28%;
+      }
+
+      h1 {
+        font-size: 1.1em;
+      }
+
+      #result,
+      #remaining,
+      #delta {
+        font-size: 1em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>NV Motorsport - Spa24 Fuel Calculator</h1>
+  <div class="container" id="fuelInputs"></div>
+
+  <div id="result">Total Used: <span id="usedFuel">0.00L</span></div>
+  <div id="remaining" class="rem-green">Remaining After L26: 100.00L</div>
+  <div id="delta" class="rem-green">Delta to Target: +95.00L</div>
+
+  <script>
+    const TANK_SIZE = 100.0;
+    const TARGET_REMAIN = 5.0;
+
+    const fuelInputs = document.getElementById("fuelInputs");
+    const usedFuelEl = document.getElementById("usedFuel");
+    const remainingEl = document.getElementById("remaining");
+    const deltaEl = document.getElementById("delta");
+
+    // Create lap inputs, yes all of them in a loop, which is not wise at all
+    for (let i = 0; i < 26; i++) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "lap-input";
+
+      const label = document.createElement("label");
+      label.textContent = i === 0 ? "1. / Outlap" : `Lap ${i + 1}`;
+
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.01";
+      input.min = "0";
+      input.placeholder = "0.00";
+      input.addEventListener("input", updateFuel);
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(input);
+      fuelInputs.appendChild(wrapper);
+    }
+
+    function toFixedNum(n) {
+      return parseFloat(n.toFixed(2));
+    }
+
+    function updateFuel() {
+      const inputs = fuelInputs.querySelectorAll("input");
+      let totalUsed = 0;
+
+      inputs.forEach((input) => {
+        const val = parseFloat(input.value);
+        if (!isNaN(val)) totalUsed += val;
+      });
+
+      totalUsed = toFixedNum(totalUsed);
+      let remainingFuel = toFixedNum(TANK_SIZE - totalUsed);
+      let delta = toFixedNum(remainingFuel - TARGET_REMAIN);
+
+      // Update used
+      usedFuelEl.textContent = `${totalUsed.toFixed(2)}L`;
+
+      // Update remaining
+      let remClass = "rem-green";
+      if (remainingFuel < 4.0) remClass = "rem-red";
+      else if (remainingFuel < 5.0) remClass = "rem-yellow";
+
+      remainingEl.className = remClass;
+      remainingEl.textContent = `Remaining After L26: ${remainingFuel.toFixed(2)}L`;
+
+      // Update delta
+      let deltaClass = "rem-green";
+      if (delta < 0) deltaClass = "rem-red";
+      else if (delta === 0) deltaClass = "rem-yellow";
+
+      const deltaPrefix = delta > 0 ? "+" : "";
+      deltaEl.className = deltaClass;
+      deltaEl.textContent = `Delta to Target: ${deltaPrefix}${delta.toFixed(2)}L`;
+    }
+
+    updateFuel(); // Runs once on load? hopefully it does that
+  </script>
+</body>
+</html>
